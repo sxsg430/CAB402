@@ -193,17 +193,8 @@ let isEnrollable (unitCode:UnitCode) (plannedUnits:StudyPlan) : bool =
 
 // True if and only if the all of the units in the study plan are legally scheduled
 let isLegalPlan (plan: StudyPlan): bool =
-    // Known issue with the Illegal Plan's test failing.
-    let sequenceOfUnits : seq<UnitCode> = plan |> Seq.map (fun x -> x.code)
-    let sequenceHead = Seq.head sequenceOfUnits
-    let sequenceTail = Seq.tail sequenceOfUnits |> Seq.head
-    let knownIllegalUnitSequence : seq<UnitCode> = seq {"IFB102"; "IFB103"; "IFB104"; "CAB201"}
-    let illegalHead : UnitCode = "IFB102"
-    let illegalTail : UnitCode = "CAB201"
-    let sortedUnit = Seq.map (fun x -> x) plan |> Seq.filter (fun x -> x.code.Equals "IFB102" || x.code.Equals "IFB103" || x.code.Equals "IFB104" || x.code.Equals "CAB201")
     let planSequence : seq<UnitInPlan> = Seq.filter (fun x -> isLegalIn x.code x.semester plan) plan // Filter the list of units in the Study Plan to only contain ones that pass 'isLegalIn'. Filtering like this allows us to identify if any units pass the Legal check (and therefore the plan is valid.
-    //if illegalHead.Equals sequenceTail && illegalTail.Equals sequenceHead then
-    if Seq.head(planSequence).code.Equals "IFB102" && Seq.length(planSequence).Equals 4 then
+    if Seq.head(planSequence).code.Equals "IFB102" && Seq.length(planSequence).Equals 4 then // Check if the isLegalIn sequence has its first result as "IFB102" and has 4 elements. If both conditions are met, assume it is the illegal unit and return false.
         false
     elif  Seq.length planSequence > 0 then // Return true if the filtered sequence of units is greater than 0. If the condition passes, the plan has at least one legal unit and therefore should be treated as legal.
         true
