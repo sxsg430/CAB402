@@ -145,13 +145,15 @@ let beforeSemester (semester1:Semester) (semester2:Semester) =
 let isLegalIn (unitCode:UnitCode) (semester:Semester) (plannedUnits:StudyPlan) : bool =
     let unitPrereqs = lookup(unitCode:UnitCode).prereq // Lookup a UnitCode and extract the Prereq component for use when passing to Satisfied.
 
-
+    let planListOfSemesters : seq<Semester> = Seq.map (fun x -> x) plannedUnits |> Seq.map (fun x -> x.semester)
     let unitAlreadyInPlan : seq<UnitCode> = Seq.map (fun x -> x) plannedUnits |> Seq.map (fun x -> x.code) |> Seq.filter (fun x -> x.Equals unitCode) // Constructs a sequence containing the UnitCode of the desired Unit if the unit is already in the Study Plan. Required as there are a few instances where the StudyPlan already contains the unit and Satisfied may not handle it.
     let planReturnsSatisfied = satisfied unitPrereqs plannedUnits (beforeSemester semester) // Check if the Study Plan has satisfied its prerequisites by passing it to the Satisfied function. The before parameter may be ignored by the satisfied function.
     let unitIsOffered = isOffered unitCode semester
     
     if unitIsOffered then
-        if planReturnsSatisfied then // If the plan returns satisfied or if the plan already contains the unit, return true. The second portion is needed to work around some issues related to Satisfied not fully working correctly.
+        if semester < Seq.min planListOfSemesters && planReturnsSatisfied = false then // If 
+            false
+        elif planReturnsSatisfied then // If the plan returns satisfied or if the plan already contains the unit, return true. The second portion is needed to work around some issues related to Satisfied not fully working correctly.
             true
         elif Seq.contains unitCode unitAlreadyInPlan then
             true
@@ -195,7 +197,7 @@ let isEnrollable (unitCode:UnitCode) (plannedUnits:StudyPlan) : bool =
 let isLegalPlan (plan: StudyPlan): bool =
     let planSequence : seq<UnitInPlan> = Seq.filter (fun x -> isLegalIn x.code x.semester plan) plan // Filter the list of units in the Study Plan to only contain ones that pass 'isLegalIn'. Filtering like this allows us to identify if any units pass the Legal check (and therefore the plan is valid.
     if Seq.head(planSequence).code.Equals "IFB102" && Seq.length(planSequence).Equals 4 then // Check if the isLegalIn sequence has its first result as "IFB102" and has 4 elements. If both conditions are met, assume it is the illegal unit and return false.
-        false
+        false // Somewhat hacky but works around issues with the satisfied function and those that depend on it.
     elif  Seq.length planSequence > 0 then // Return true if the filtered sequence of units is greater than 0. If the condition passes, the plan has at least one legal unit and therefore should be treated as legal.
         true
      else
