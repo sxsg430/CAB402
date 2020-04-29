@@ -173,17 +173,14 @@ let isEnrollableIn (unitCode:UnitCode) (semester:Semester) (plannedUnits:StudyPl
     // Construct a sequence of all semesters used in a plan, filter it to only get ones in the desired semester and return the length of the Seq. Used to check if the semester still had space to assign units to (less than 4 taken).
     let planUnitsInSemester : int = Seq.map (fun x -> x.semester) plannedUnits |> Seq.filter (fun x -> x.Equals(semester)) |> Seq.length 
     let legalUnitVal = isLegalIn unitCode semester plannedUnits // Check if a unit is legal in a given semester and plan. Checks if a given unit has passed isLegalIn (and Satisfied) to see if it is fully valid.
-    if legalUnitVal then
-        if planUnitsInSemester <= 3 then // If the unit is Legal (and passes Satisfied) and there are less than 4 units already taken in the semester, return true. False otherwise.
-            true
-        else
-            false
+    if legalUnitVal && planUnitsInSemester <= 3 then // If the unit is Legal (and passes Satisfied) and there are less than 4 units already taken in the semester, return true. False otherwise.
+        true
     else
         false
 
 // True if and only if the unit can be legally added to the study plan (in some semester) 
 let isEnrollable (unitCode:UnitCode) (plannedUnits:StudyPlan) : bool =
-    // Failing tests are likely due to issues with isEnrollableIn and its dependencies
+    // Failing tests are likely due to issues with isEnrollableIn and its dependencies (like not testing for credit points)
     let unitSemesterSem1 = {year=2026; offering=Semester1} // Construct two Semesters multiple years in the future for testing. One for Semester 1 & 2.
     let unitSemesterSem2 = {year=2026; offering=Semester2} // Used so issues with the year when checking enrollable status are removed from the equation (only testing based on Semesters).
     let enrolStatusS1 = isEnrollableIn unitCode unitSemesterSem1 plannedUnits // Check if unit is Enrollable in one of the Semesters above with the current plan. Runs twice so both semesters can be handled.
