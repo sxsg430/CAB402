@@ -145,18 +145,21 @@ let beforeSemester (semester1:Semester) (semester2:Semester) =
 let isLegalIn (unitCode:UnitCode) (semester:Semester) (plannedUnits:StudyPlan) : bool =
     let unitPrereqs = lookup(unitCode:UnitCode).prereq // Lookup a UnitCode and extract the Prereq component for use when passing to Satisfied.
 
-    let planListOfSemesters : seq<Semester> = Seq.map (fun x -> x) plannedUnits |> Seq.map (fun x -> x.semester)
+    let planListOfSemesters : seq<Semester> = Seq.map (fun x -> x) plannedUnits |> Seq.map (fun x -> x.semester) // Generate a list of semesters from the Study Plan for later comparisons (workaround for failing tests resulting from satisfied).
     let unitAlreadyInPlan : seq<UnitCode> = Seq.map (fun x -> x) plannedUnits |> Seq.map (fun x -> x.code) |> Seq.filter (fun x -> x.Equals unitCode) // Constructs a sequence containing the UnitCode of the desired Unit if the unit is already in the Study Plan. Required as there are a few instances where the StudyPlan already contains the unit and Satisfied may not handle it.
     let planReturnsSatisfied = satisfied unitPrereqs plannedUnits (beforeSemester semester) // Check if the Study Plan has satisfied its prerequisites by passing it to the Satisfied function. The before parameter may be ignored by the satisfied function.
     let unitIsOffered = isOffered unitCode semester
     
     if unitIsOffered then
-        if semester < Seq.min planListOfSemesters && planReturnsSatisfied = false then // If 
-            false
-        elif planReturnsSatisfied then // If the plan returns satisfied or if the plan already contains the unit, return true. The second portion is needed to work around some issues related to Satisfied not fully working correctly.
-            true
-        elif Seq.contains unitCode unitAlreadyInPlan then
-            true
+        if Seq.length planListOfSemesters > 0 then // Fix to stop the WPF view from crashing during startup due to the list of planned semesters sometimes having no values. Was likely caused by the first set in the contained if statement which required values in the sequence.
+            if semester < Seq.min(planListOfSemesters) && planReturnsSatisfied.Equals false then // If the provided semester is earlier than the minimum value in the sequence of semesters and the plan doesn't return satisfied, return false. Somewhat of a workaround to fix failing tests as a result of issues with satisfied.
+                false
+            elif planReturnsSatisfied then // If the plan returns satisfied or if the plan already contains the unit, return true. The second portion is needed to work around some issues related to Satisfied not fully working correctly.
+                true
+            elif Seq.contains unitCode unitAlreadyInPlan then
+                true
+            else
+                false
         else
             false
     else
