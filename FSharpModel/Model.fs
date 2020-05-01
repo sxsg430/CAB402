@@ -3,11 +3,6 @@
 open QUT
 
 
-// #################
-// SUPPORT FUNCTIONS
-// Extra/Repeatedly-used functions from elsewhere in the code, separated to reduce complexity & code reuse.
-// #################
-
 // Support Function: Replace character within a string.
 let stripStringCharacter (originalChar:string) (newChar:string) (strBody:string) : string =
     strBody.Replace(originalChar, newChar) // Replace 'originalChar' in the 'strBody' string with 'newChar' and return.
@@ -70,7 +65,7 @@ let rec SemesterSequence (firstSemester: Semester) (lastSemester: Semester): seq
         if firstSemester <= lastSemester then // If the first semester is less than or equal to the last semester, yield the first semester and recursively call the function with the next semester in sequence.
             yield firstSemester;
             yield! SemesterSequence (nextSemester firstSemester) lastSemester
-        } |> Seq.filter (fun x -> x.offering = Semester1 || x.offering = Semester2) // Filter the output to only contain entries for Semester 1 and 2. May not be needed but helps to pass a few additional tests.
+        } |> Seq.filter (fun x -> x.offering = Semester1 || x.offering = Semester2) // Filter the output to only contain entries for Semester 1 and 2. Probably shouldn't be used but it helps to pass a few additional Bound Unit tests with the naive implementation.
 
 
 // ###
@@ -104,7 +99,7 @@ let getPrereqValues (preqval:Prereq) : seq<Prereq> =
 // True if and only if the prerequisites have been met based on units in the study 
 // plan taken in an earlier semester (based on the before function)
 let rec private satisfied (prereq:Prereq) (plannedUnits:StudyPlan) (before: Semester->bool) : bool = 
-    // When this function was originally written, I didn't use any of the recursive features in my implementaion.
+    // When this function was originally written, I didn't use any of the recursive features in my implementaion (didn't have time to go back through and rewrite without introducing additional complexity).
     // In addition, the 'before' parameter is ignored and I never implemented checking against the Credit Points of a Prereq.
 
     let currentUnitCode : UnitCode = getPrereqUnitCodes prereq // Legacy code that was used in an attempt to fix some of the failed unit tests of functions that depend on satisfied.
@@ -222,7 +217,7 @@ let prereqCreditMatch listEntry =
 let UnitPrereqs (unitCode:UnitCode) : seq<UnitCode> = 
     let stringOfPrereqs = lookup(unitCode).prereqString // Lookup unit code and get the string of prerequisites.
     if stringOfPrereqs <> "" then // If string of prerequisites isn't empty, continue. Required as some units don't have any prerequisites, resulting in an empty string which can't be parsed.
-        let prereqSplit = splitUnitString(replaceUnitCharacters(stringOfPrereqs)) // Pass unit list to a support function to strip out known extra characters. Constructs a string containing just the Unit Codes, CreditPoints and possibly a few random spaces remaining from the string. 
+        let prereqSplit = splitUnitString(replaceUnitCharacters(stringOfPrereqs)) // Pass unit list to a support function to strip out known extra characters and split into a list. Constructs a list with just the unit codes in the original string, no 'and'/'or' or punctuation. 
         let unitPrereqSequence = List.filter (fun x -> x <> " ") prereqSplit |> Seq.filter (fun x -> prereqCreditMatch x = 1) // Filters the list of Prerequisite Unit Codes to remove any blank entries left. Pipes it into an additional filter to remove any elements that returned 0 in the associated match (removing CreditPoint values) and converts it to a Sequence. Leaves just the UnitCodes in the format expected by the function.
         unitPrereqSequence
     else

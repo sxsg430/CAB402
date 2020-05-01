@@ -27,21 +27,16 @@ let rec private scheduleRemaining (remainingUnits:BoundPlan) (plannedUnits:Study
     if List.length remainingUnits = 0 then // If the length of the provided Bound Plan is 0, assume it is empty and return the current Study Plan.
         Option.Some plannedUnits
     else
-        
         let boundPlanHeadElement = remainingUnits.Head // Obtain the first unit in the BoundPlan by taking its head value.
         let semesterCount =  boundPlanHeadElement.possibleSemesters |> Seq.countBy id // Construct a new sequence of the type Semester * Int. and pass it the list of Possible Semesters from the saved head element. Results are in the form (Semester, Occurances) for later use when parsing.
         let sortedSemesters = Seq.map (fun x -> matchSemesterAmount x) semesterCount // New sequence containing the values of the Sequence above run through the match support function which returns the Semester elements that occur in the head unit. Didn't quite do what I initially thought it would do when I wrote it but never rewrote any code that depended on it.
-
-
         let plannedUnitSemesters = Seq.filter (fun x -> isEnrollableIn boundPlanHeadElement.code x plannedUnits) sortedSemesters // Filter the list of sorted semesters by which semester the selected head unit can be enrolled in.
 
         if Seq.length plannedUnitSemesters > 0 then // If the length of the sequence of semesters containing the enrollable semesters has any contents, continue.
             let newUnit : seq<UnitInPlan> = Seq.singleton { code = boundPlanHeadElement.code; studyArea = boundPlanHeadElement.studyArea; semester = Seq.max plannedUnitSemesters} // Construct new 'UnitInPlan' for appending to the Study Plan.
-
             let newBoundPlan : BoundPlan = remainingUnits |> List.rev |> List.take (List.length remainingUnits - 1) |> List.rev // An attempt at removing the head element from the Bound Plan. Reverses the plan, takes all elements but the last one and reverses the list again to obtain (hopefully) the list without its first value.
-
             let newStudyPlan : StudyPlan = plannedUnits |> Seq.map (fun x -> x) |> Seq.append newUnit // Create a new study plan by appending the new UnitInPlan to the existing Plan.
-            scheduleRemaining newBoundPlan newStudyPlan
+            scheduleRemaining newBoundPlan newStudyPlan // Call the function again with the new parameters for recursive use.
         else
             Option.None // Return Option.None as required if no units are available for scheduling.
 
@@ -50,7 +45,7 @@ let rec private scheduleRemaining (remainingUnits:BoundPlan) (plannedUnits:Study
 // the study plan could be completed, assuming at most 4 units per semester.
 let private bestAchievable (firstSemester:Semester) (plan:StudyPlan) : Semester =
      let unitsInPlan = float(Seq.length plan) // Obtain the float value of the length of the provided Study Plan.
-     let semesterCount = int(ceil(unitsInPlan / 4.0)) //Divide the length of the Study Plan by 4 (max number of units per semester), round it up to the nearest whole number and convert it back into an integer for later use.
+     let semesterCount = int(ceil(unitsInPlan / 4.0)) // Divide the length of the Study Plan by 4 (max number of units per semester), round it up to the nearest whole number and convert it back into an integer for later use.
      let finalSequence = SemesterSequence firstSemester {year=2026; offering=Semester2} |> Seq.filter (fun x -> x.offering.Equals Semester1 || x.offering.Equals Semester2) |> Seq.take semesterCount |> Seq.max
      // Generate a sequence of Semesters using the provided first Semester and one far beyond what any of the plans require. Filter the sequence so only entries for Semester 1 & 2 are present (no plans have units occuring in Summer). Only keep the entries in the list up to the number of units and take the maximum value.
      // Allows us to identify the best achievable semester based on the amonut required (excluding Summer).
@@ -76,7 +71,7 @@ let allBoundsFeasible (bounds:BoundPlan) =
 // If we succeed in finding a plan that completes by that target semester then we try to improve that plan further, 
 // semester by semester until it becomes impossible to improve further.
 let TryToImproveSchedule (plan:StudyPlan) : seq<StudyPlan> =
-    let first = currentSemester
+    let first = currentSemester // This and below two were provided in the skeleton solution.
     let last = lastSemester plan
     let bestPossible = bestAchievable first plan
     let rec TryToCompleteBy (targetGraduation:Semester) =
@@ -84,13 +79,15 @@ let TryToImproveSchedule (plan:StudyPlan) : seq<StudyPlan> =
             Seq.empty
         else
             let initialBoundPlan = BoundsOptimizer.boundUnitsInPlan plan currentSemester targetGraduation // Obtain a BoundPlan by passing the current StudyPlan, first and last semesters to the Bound Plan generator in Bounds Optimiser (still using the naive implementation).
-            let initialElement = Seq.head plan
-            let cleanStudyPlan : StudyPlan = Seq.singleton initialElement // Create a "clean" Study Plan containing just the first element of the original plan.
-            let remainingUnit = scheduleRemaining initialBoundPlan plan // Invoke Schedule Remaining with the bound plan and "clean" study plan and store the result.
+            let cleanStudyPlan : StudyPlan = Seq.empty // Create a "clean" Study Plan with no contents.
+            let remainingUnit = scheduleRemaining initialBoundPlan cleanStudyPlan // Invoke Schedule Remaining with the bound plan and "clean" study plan and store the result.
             if remainingUnit.IsNone then // If Schedule Remaining returns None or if the target graduation is equal to the best achievable semester based on the current provided semester and plan, return an empty sequence.
                 Seq.empty
             elif targetGraduation.Equals bestPossible then
                 Seq.empty
+            elif remainingUnit.IsSome then // If the function returns Some, obtain its value and return it.
+                let remainingStudyPlan = Seq.singleton remainingUnit.Value
+                remainingStudyPlan
             else
                 TryToCompleteBy (previousSemester targetGraduation) // Otherwise, recursively call TryToCompleteBy again for the next set of results.
     TryToCompleteBy (previousSemester last)
